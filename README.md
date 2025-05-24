@@ -58,7 +58,7 @@ func handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 func init() {
   // Initialize the MCP server with in-memory session manager and AWS Lambda transport handler
-  server, _ = mcp.NewMcpServer("botioapi", "1.0.0", mcp.McpProtocol2025_30_26)
+  server, _ = mcp.NewMcpServer("mcptest", "1.0.0", mcp.McpProtocol2025_30_26)
   server.LogLevel = mcp.LogLevelDebug
   server.TransportHandler = &awslambda.TransportHandler{} // Setup transport handler
   server.SessionManager = memory.NewSessionManager() // Setup in-memory session manager
@@ -75,3 +75,23 @@ func main() {
   lambda.Start(handler)
 }
 ```
+
+### Tool Functions
+
+Tool functions can accept a Go context as their first parameter. You can retrieve the current session and MCP request ID using the following helper functions:
+
+* `GetSessionFromContext(ctx)`
+* `GetRequestIDFromContext(ctx)`
+
+These functions allow you to access session-specific and request-specific information within your tool logic.
+
+## Known Limitations
+
+* Only support **streamable HTTP** transport; **Server-Sent Event (SSE)** and **stdin** are not support
+* Only support following MCP methods
+  * `initailize`
+  * `notifications/initialized`
+  * `tools/list`
+  * `tools/call`
+* Tool inputs are limited to **scalar types**: `number`, `string`, and `boolean`.
+* Tool outputs are limited to **text only**.

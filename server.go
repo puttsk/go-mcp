@@ -514,6 +514,29 @@ func (s *McpServer) MethodToolsCall(ctx context.Context, req *McpRequest) (*McpR
 
 // Tool functions:
 
+func (s *McpServer) GetTool(name string) (McpTool, error) {
+	if s.Tools == nil {
+		return McpTool{}, fmt.Errorf("no tools registered")
+	}
+
+	tool, ok := s.Tools[name]
+	if !ok {
+		return McpTool{}, fmt.Errorf("tool %s not found", name)
+	}
+
+	return tool, nil
+}
+
+func (s *McpServer) SetToolDescription(name string, desc string) error {
+	if t, err := s.GetTool(name); err != nil {
+		return err
+	} else {
+		t.Description = desc // Set the description of the tool
+		s.Tools[name] = t    // Update the tool in the map
+		return nil
+	}
+}
+
 // ListTools returns a list of registered tools with their input schema.
 func (s *McpServer) ListTools() ([]McpToolDescriptor, error) {
 	if s.Tools == nil || len(s.Tools) == 0 {
@@ -574,7 +597,7 @@ func (s *McpServer) ListTools() ([]McpToolDescriptor, error) {
 }
 
 // RegisterTool registers a tool with the server.
-func (s *McpServer) RegisterTool(name string, description string, tool any, params ...McpToolParameter) error {
+func (s *McpServer) RegisterTool(name string, tool any, params ...McpToolParameter) error {
 	if s.Tools == nil {
 		s.Tools = map[string]McpTool{}
 	}
@@ -584,11 +607,10 @@ func (s *McpServer) RegisterTool(name string, description string, tool any, para
 	}
 
 	t := McpTool{
-		Name:        name,
-		Description: description,
-		Function:    tool,
-		Parameters:  []McpToolParameter{},
-		Output:      []McpToolParameter{},
+		Name:       name,
+		Function:   tool,
+		Parameters: []McpToolParameter{},
+		Output:     []McpToolParameter{},
 	}
 
 	toolInfo := reflect.TypeOf(tool)
@@ -725,9 +747,9 @@ func (s *McpServer) CallTool(ctx context.Context, name string, params ...any) ([
 	s.Logf("Tool %s called with args: %v", name, params)
 
 	// Check if the tool is registered
-	tool, ok := s.Tools[name]
-	if !ok {
-		return nil, fmt.Errorf("tool %s not found", name)
+	tool, err := s.GetTool(name)
+	if err != nil {
+		return nil, err
 	}
 
 	if tool.Function == nil {

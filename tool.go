@@ -69,6 +69,12 @@ func (t McpTool) String() string {
 	return t.Name + " (" + strings.Join(params, ",") + ")" + " -> " + strings.Join(outs, ",")
 }
 
+// SetDescription sets the description of the tool
+func (t *McpTool) SetDescription(description string) *McpTool {
+	t.Description = description
+	return t
+}
+
 // McpToolParameter represents tool parameters with go-compatible data type.
 type McpToolParameter struct {
 	Name        string

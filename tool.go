@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"encoding/base64"
 	"reflect"
 	"strings"
 )
@@ -12,14 +13,10 @@ type McpToolDescriptor struct {
 }
 
 type McpToolInputSchema struct {
-	Type       string                                `json:"type"`               // Always "object"
-	Properties map[string]McpToolInputSchemaProperty `json:"properties"`         // Properties of the tool. Key is the property name
-	Required   []string                              `json:"required,omitempty"` // Required properties of the tool
-}
-
-type McpToolInputSchemaProperty struct {
-	Type        string `json:"type"`        // Type of the property
-	Description string `json:"description"` // Description of the property
+	Type        string                        `json:"type"`                  // Data type of tool input
+	Description string                        `json:"description,omitempty"` // Description of the property
+	Properties  map[string]McpToolInputSchema `json:"properties,omitempty"`  // Properties of the tool. Key is the property name
+	Required    []string                      `json:"required,omitempty"`    // Required properties of the tool
 }
 
 type McpToolOutput struct {
@@ -34,6 +31,8 @@ func (o McpToolOutput) String() string {
 	case McpToolOutputTypeText,
 		McpToolOutputTypeError:
 		return "\"" + o.Text + "\"" + " (" + string(o.Type) + ")"
+	case McpToolOutputTypeImage:
+		return o.MimeType + " (image)"
 	default:
 		return o.MimeType + " (data)"
 	}
@@ -43,6 +42,7 @@ func (o McpToolOutput) String() string {
 type McpToolOutputType string
 
 const McpToolOutputTypeText McpToolOutputType = "text"
+const McpToolOutputTypeImage McpToolOutputType = "image"
 const McpToolOutputTypeError McpToolOutputType = "error"
 
 type McpTool struct {
@@ -91,3 +91,23 @@ const McpToolDataTypeNumber McpToolDataType = "number"
 const McpToolDataTypeBoolean McpToolDataType = "boolean"
 const McpToolDataTypeError McpToolDataType = "error"
 const McpToolDataTypeContext McpToolDataType = "context"
+const McpToolDataTypeImage McpToolDataType = "image"
+
+type McpImageMimeType string
+
+const McpImageMimeTypePNG McpImageMimeType = "image/png"
+const McpImageMimeTypeJPG McpImageMimeType = "image/jpg"
+const McpImageMimeTypeJPEG McpImageMimeType = "image/jpeg"
+
+type McpImage struct {
+	MimeType McpImageMimeType `json:"mimeType"` // Mime type of the image
+	Data     string           `json:"data"`     // Base64 encoded image data
+}
+
+func (img *McpImage) GetImageBinary() ([]byte, error) {
+	data, err := base64.StdEncoding.DecodeString(img.Data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}

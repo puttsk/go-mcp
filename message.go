@@ -16,65 +16,45 @@ type McpResponse struct {
 	Error   *McpError      `json:"error,omitempty"`  // Error
 }
 
-type McpError struct {
-	Code    int    `json:"code"`           // Error code
-	Message string `json:"message"`        // Error message
-	Data    any    `json:"data,omitempty"` // Error data
+// Initialize method response
+
+type McpInitializeResponse struct {
+	ProtocolVersion McpProtocolVersion    `json:"protocolVersion"` // Protocol version
+	Capabilities    McpServerCapabilities `json:"capabilities"`    // Capabilities
+	ServerInfo      McpServerInfo         `json:"serverInfo"`      // Server info
+	Instructions    string                `json:"instructions"`    // Instructions
 }
 
-func (e McpError) Error() string {
-	return e.Message
+type McpServerInfo struct {
+	Name    string `json:"name"`    // Server name
+	Version string `json:"version"` // Server version
 }
 
-func NewMcpError(code int, message string, data any) *McpError {
-	return &McpError{
-		Code:    code,
-		Message: message,
-		Data:    data,
-	}
+type McpServerCapabilities struct {
+	Logging   any                     `json:"logging,omitempty"`   // Logging capabilities
+	Prompts   *McpCapabilityPrompts   `json:"prompts,omitempty"`   // Prompts capabilities
+	Resources *McpCapabilityResources `json:"resources,omitempty"` // Resources capabilities
+	Tools     *McpCapabilityTools     `json:"tools,omitempty"`     // Tools capabilities
 }
 
-var ErrNoSessionHeader = NewMcpError(ErrInvalidRequestCode, "no session header", nil)
-var ErrSessionAlreadyInitialized = NewMcpError(ErrInvalidRequestCode, "session already initialized", nil)
-var ErrSessionNotFound = NewMcpError(ErrInvalidRequestCode, "session not found", nil)
-
-var ErrSessionNotInitialized = NewMcpError(ErrInvalidRequestCode, "session not initialized", nil)
-
-var ErrInvalidMcpRequestParameters = NewMcpError(ErrInvalidParametersCode, "invalid params", nil)
-var ErrInvalidToolArguments = NewMcpError(ErrInvalidParametersCode, "invalid tool arguments", nil)
-
-func NewErrUnknownMethod(method string) *McpError {
-	return &McpError{
-		Code:    ErrMethodNotFoundCode,
-		Message: "unknown method",
-		Data: map[string]any{
-			"method": method,
-		},
-	}
+type McpCapabilityPrompts struct {
+	ListChanged bool `json:"listChanged"` // List changed
+}
+type McpCapabilityResources struct {
+	ListChanged bool `json:"listChanged"` // List changed
+	Subscribe   bool `json:"subscribe"`   // Subscribe
+}
+type McpCapabilityTools struct {
+	ListChanged bool `json:"listChanged"` // List changed
 }
 
-func NewErrInvalidArgumentType(name string, expected McpToolDataType) *McpError {
-	return &McpError{
-		Code:    ErrInvalidParametersCode,
-		Message: "invalid argument type",
-		Data: map[string]any{
-			"argument": name,
-			"type":     expected,
-		},
-	}
+// Tool Response
+
+type McpToolsListResponse struct {
+	Tools []McpToolDescriptor `json:"tools"` // List of tools
 }
 
-func NewErrInternalError(message string, data any) *McpError {
-	return &McpError{
-		Code:    ErrInternalErrorCode,
-		Message: message,
-		Data:    data,
-	}
+type McpToolCallResponse struct {
+	Content []McpToolOutput `json:"content"` // Contents of the tool call response
+	IsError bool            `json:"isError"` // Is error
 }
-
-// Standard JSON-RPC errors
-const ErrInvalidRequestCode = -32600
-const ErrMethodNotFoundCode = -32601
-const ErrInvalidParametersCode = -32602
-const ErrInternalErrorCode = -32603
-const ErrParseErrorCode = -32700

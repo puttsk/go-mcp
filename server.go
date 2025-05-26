@@ -297,7 +297,9 @@ func (s *McpServer) MethodToolsList(ctx context.Context, req *McpRequest) (*McpR
 	if err != nil {
 		return nil, err
 	}
-	resp := map[string]any{"tools": tools}
+	resp := McpToolsListResponse{
+		Tools: tools,
+	}
 
 	return s.CreateMcpResponse(ctx, resp)
 }
@@ -427,6 +429,54 @@ func (s *McpServer) MethodToolsCall(ctx context.Context, req *McpRequest) (*McpR
 				return s.CreateMcpErrorResponse(ctx, NewErrInvalidArgumentType(p.Name, p.Type))
 			}
 			toolArgs = append(toolArgs, param)
+		case reflect.Struct:
+			switch p.Type {
+			case McpToolDataTypeImage:
+				// MCP Image
+				imgRaw, ok := val.(map[string]any)
+				if !ok {
+					s.Logf("argument is not %s (actual: %s)", p.Kind, reflect.TypeOf(val))
+					return s.CreateMcpErrorResponse(ctx, NewErrInvalidArgumentType(p.Name, p.Type))
+				}
+
+				img := McpImage{}
+
+				if data, ok := imgRaw["data"]; ok {
+					if v, ok := data.(string); ok {
+						img.Data = v
+					} else {
+						s.Logf("image data is not a base64 string (actual: %s)", reflect.TypeOf(data))
+						return s.CreateMcpErrorResponse(ctx, NewErrInvalidArgumentType(p.Name, p.Type))
+					}
+				} else {
+					s.Logf("image data is missing")
+					return s.CreateMcpErrorResponse(ctx, NewErrInvalidArgumentType(p.Name, p.Type))
+				}
+
+				if mimeType, ok := imgRaw["mimeType"]; ok {
+					if v, ok := mimeType.(string); ok {
+						// Validate MIME type
+						switch McpImageMimeType(v) {
+						case McpImageMimeTypePNG,
+							McpImageMimeTypeJPG,
+							McpImageMimeTypeJPEG:
+							// Valid MIME type
+						default:
+							s.Logf("image mimeType is not supported (actual: %s)", v)
+							return s.CreateMcpErrorResponse(ctx, NewMcpError(ErrInvalidParametersCode, "image MIME type not supported", nil))
+						}
+						img.MimeType = McpImageMimeType(v)
+					} else {
+						s.Logf("image mimeType is not a string (actual: %s)", reflect.TypeOf(mimeType))
+						return s.CreateMcpErrorResponse(ctx, NewErrInvalidArgumentType(p.Name, p.Type))
+					}
+				} else {
+					s.Logf("image mimeType is missing")
+					return s.CreateMcpErrorResponse(ctx, NewErrInvalidArgumentType(p.Name, p.Type))
+				}
+
+				toolArgs = append(toolArgs, img)
+			}
 		default:
 			return s.CreateMcpErrorResponse(ctx, NewErrInvalidArgumentType(p.Name, p.Type))
 		}
@@ -440,17 +490,25 @@ func (s *McpServer) MethodToolsCall(ctx context.Context, req *McpRequest) (*McpR
 	// Check if the tool returned an error
 	for _, o := range result {
 		if o.Type == McpToolOutputTypeError {
-			resp := map[string]any{"content": []McpToolOutput{
-				{
-					Type: McpToolOutputTypeText,
-					Text: o.Text,
+			resp := McpToolCallResponse{
+				Content: []McpToolOutput{
+					{
+						Type: McpToolOutputTypeText,
+						Text: o.Text,
+					},
 				},
-			}, "isError": true}
+				IsError: true,
+			}
+
 			return s.CreateMcpResponse(ctx, resp)
 		}
 	}
 
-	resp := map[string]any{"content": result, "isError": false}
+	resp := McpToolCallResponse{
+		Content: result,
+		IsError: false,
+	}
+
 	return s.CreateMcpResponse(ctx, resp)
 }
 
@@ -469,7 +527,7 @@ func (s *McpServer) ListTools() ([]McpToolDescriptor, error) {
 			Description: tool.Description,
 			InputSchema: McpToolInputSchema{
 				Type:       "object",
-				Properties: make(map[string]McpToolInputSchemaProperty),
+				Properties: make(map[string]McpToolInputSchema),
 				Required:   []string{},
 			},
 		}
@@ -483,9 +541,27 @@ func (s *McpServer) ListTools() ([]McpToolDescriptor, error) {
 				continue
 			}
 
-			t.InputSchema.Properties[param.Name] = McpToolInputSchemaProperty{
-				Type:        string(param.Type),
-				Description: param.Description,
+			switch param.Type {
+			case McpToolDataTypeImage:
+				t.InputSchema.Properties[param.Name] = McpToolInputSchema{
+					Type:        "object",
+					Description: param.Description,
+					Properties: map[string]McpToolInputSchema{
+						"data": {
+							Type:        "string",
+							Description: "Base64 encoded image data",
+						},
+						"mimeType": {
+							Type:        "string",
+							Description: "MIME type of the image (e.g., image/png, image/jpeg)",
+						},
+					},
+				}
+			default:
+				t.InputSchema.Properties[param.Name] = McpToolInputSchema{
+					Type:        string(param.Type),
+					Description: param.Description,
+				}
 			}
 
 			// Make all parameters required since Go functions do not support optional parameters
@@ -562,6 +638,14 @@ func (s *McpServer) RegisterTool(name string, description string, tool any, para
 		case reflect.Bool:
 			// Boolean type
 			p.Type = McpToolDataTypeBoolean
+		case reflect.Struct:
+			// Struct type
+			if arg == reflect.TypeOf((*McpImage)(nil)).Elem() {
+				// If the struct is McpImage, set the type accordingly
+				p.Type = McpToolDataTypeImage
+			} else {
+				return fmt.Errorf("unsupported struct type: %s", arg.Kind())
+			}
 		case reflect.Interface:
 			// Interface type
 
@@ -605,6 +689,15 @@ func (s *McpServer) RegisterTool(name string, description string, tool any, para
 		case reflect.Bool:
 			// Boolean type
 			p.Type = McpToolDataTypeBoolean
+		case reflect.Struct:
+			// Struct type
+			if out == reflect.TypeOf((*McpImage)(nil)).Elem() {
+				// If the struct is McpImage, set the type accordingly
+				p.Type = McpToolDataTypeImage
+			} else {
+				return fmt.Errorf("unsupported struct type: %s", out.Kind())
+			}
+
 		case reflect.Interface:
 			// Interface type
 			if out.Implements(reflect.TypeOf((*error)(nil)).Elem()) {
@@ -662,13 +755,36 @@ func (s *McpServer) CallTool(ctx context.Context, name string, params ...any) ([
 
 	// Setup the rest of the arguments based on the tool parameters
 	for i, p := range tool.Parameters {
-		if contextOffset <= i {
-			arg := reflect.ValueOf(params[i-contextOffset])
+		// Skip context parameter if it is the first parameter
+		if contextOffset > i {
+			continue
+		}
+
+		// Get argument value from params as reflect.Value
+		arg := reflect.ValueOf(params[i-contextOffset])
+
+		switch p.Type {
+		case McpToolDataTypeString,
+			McpToolDataTypeNumber,
+			McpToolDataTypeBoolean:
+			// Verify the argument type matches the tool parameter type
 			if arg.Kind() != p.Kind {
 				return nil, fmt.Errorf("tool %s parameter %d has wrong type: expected %s, got %s", name, i, p.Kind, arg.Kind())
 			}
 			args = append(args, arg)
+
+		case McpToolDataTypeImage:
+			// Check if the parameter is of type McpImage
+			if arg.Type() != reflect.TypeOf((*McpImage)(nil)).Elem() {
+				return nil, fmt.Errorf("tool %s parameter %d has wrong type: expected McpImage, got %s", name, i, arg.Type())
+			}
+			args = append(args, arg)
+
+		default:
+			// Unsupported type
+			return nil, fmt.Errorf("tool %s parameter %d has unsupported type: %s", name, i, p.Type)
 		}
+
 	}
 
 	s.Debugf("Tool %s calling function with args: %v (%d)", name, args, len(args))
@@ -699,6 +815,15 @@ func (s *McpServer) CallTool(ctx context.Context, name string, params ...any) ([
 				Text: fmt.Sprint(out[i]),
 			}
 			output = append(output, mcpOut)
+		case McpToolDataTypeImage:
+			// Convert the output to MCP Image content
+			mcpOut := McpToolOutput{
+				Type:     McpToolOutputTypeImage,
+				Data:     out[i].FieldByName("Data").String(),
+				MimeType: out[i].FieldByName("MimeType").String(),
+			}
+			output = append(output, mcpOut)
+
 		case McpToolDataTypeError:
 			// Check if function return an error
 			if !out[i].IsNil() {

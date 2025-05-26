@@ -93,5 +93,5 @@ These functions allow you to access session-specific and request-specific inform
   * `notifications/initialized`
   * `tools/list`
   * `tools/call`
-* Tool inputs are limited to **scalar types**: `number`, `string`, and `boolean`.
-* Tool outputs are limited to **text only**.
+* Tool inputs are limited to **scalar types**: `number`, `string`, `boolean`, and `image`.
+* Tool outputs are limited to **text** and **image**.

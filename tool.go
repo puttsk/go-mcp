@@ -39,6 +39,7 @@ func (o McpToolOutput) String() string {
 	}
 }
 
+// McpToolOutputType represents the data type of the tool output.
 type McpToolOutputType string
 
 const McpToolOutputTypeText McpToolOutputType = "text"
@@ -68,10 +69,11 @@ func (t McpTool) String() string {
 	return t.Name + " (" + strings.Join(params, ",") + ")" + " -> " + strings.Join(outs, ",")
 }
 
+// McpToolParameter represents tool parameters with go-compatible data type.
 type McpToolParameter struct {
 	Name        string
 	Description string
-	Type        McpToolParameterType
+	Type        McpToolDataType
 	Kind        reflect.Kind
 }
 
@@ -82,10 +84,10 @@ func (p McpToolParameter) String() string {
 	return p.Name + " (" + string(p.Type) + ")"
 }
 
-type McpToolParameterType string
+type McpToolDataType string
 
-const McpToolParameterTypeString McpToolParameterType = "string"
-const McpToolParameterTypeNumber McpToolParameterType = "number"
-const McpToolParameterTypeBoolean McpToolParameterType = "boolean"
-const McpToolParameterTypeError McpToolParameterType = "error"
-const McpToolParameterTypeContext McpToolParameterType = "context"
+const McpToolDataTypeString McpToolDataType = "string"
+const McpToolDataTypeNumber McpToolDataType = "number"
+const McpToolDataTypeBoolean McpToolDataType = "boolean"
+const McpToolDataTypeError McpToolDataType = "error"
+const McpToolDataTypeContext McpToolDataType = "context"

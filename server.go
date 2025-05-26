@@ -350,7 +350,7 @@ func (s *McpServer) MethodToolsCall(ctx context.Context, req *McpRequest) (*McpR
 
 	// Convert MCP tool parameters to function arguments
 	for _, p := range tool.Parameters {
-		if p.Type == McpToolParameterTypeContext {
+		if p.Type == McpToolDataTypeContext {
 			// Slip for context.Context parameter
 			continue
 		}
@@ -476,7 +476,7 @@ func (s *McpServer) ListTools() ([]McpToolDescriptor, error) {
 		for i, param := range tool.Parameters {
 
 			// Do not expose context.Context as a parameter
-			if param.Type == McpToolParameterTypeContext {
+			if param.Type == McpToolDataTypeContext {
 				if i != 0 {
 					return nil, fmt.Errorf("context.Context must be the first parameter")
 				}
@@ -555,20 +555,20 @@ func (s *McpServer) RegisterTool(name string, description string, tool any, para
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 			reflect.Float32, reflect.Float64:
 			// Number type
-			p.Type = McpToolParameterTypeNumber
+			p.Type = McpToolDataTypeNumber
 		case reflect.String:
 			// String type
-			p.Type = McpToolParameterTypeString
+			p.Type = McpToolDataTypeString
 		case reflect.Bool:
 			// Boolean type
-			p.Type = McpToolParameterTypeBoolean
+			p.Type = McpToolDataTypeBoolean
 		case reflect.Interface:
 			// Interface type
 
 			// If the parameter is context.Context, set the type accordingly
 			// Else return erros as unsupported type
 			if arg.Implements(reflect.TypeOf((*context.Context)(nil)).Elem()) {
-				p.Type = McpToolParameterTypeContext
+				p.Type = McpToolDataTypeContext
 				if i != 0 {
 					return fmt.Errorf("context.Context must be the first parameter")
 				}
@@ -598,18 +598,18 @@ func (s *McpServer) RegisterTool(name string, description string, tool any, para
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 			reflect.Float32, reflect.Float64:
 			// Number type
-			p.Type = McpToolParameterTypeNumber
+			p.Type = McpToolDataTypeNumber
 		case reflect.String:
 			// String type
-			p.Type = McpToolParameterTypeString
+			p.Type = McpToolDataTypeString
 		case reflect.Bool:
 			// Boolean type
-			p.Type = McpToolParameterTypeBoolean
+			p.Type = McpToolDataTypeBoolean
 		case reflect.Interface:
 			// Interface type
 			if out.Implements(reflect.TypeOf((*error)(nil)).Elem()) {
 				// Error type
-				p.Type = McpToolParameterTypeError
+				p.Type = McpToolDataTypeError
 			} else {
 				return fmt.Errorf("unsupported function return type: %s", out.Kind())
 			}
@@ -653,7 +653,7 @@ func (s *McpServer) CallTool(ctx context.Context, name string, params ...any) ([
 
 	// Setup context as first argument if the tool has a context parameter
 	if len(tool.Parameters) > 0 {
-		if tool.Parameters[0].Type == McpToolParameterTypeContext {
+		if tool.Parameters[0].Type == McpToolDataTypeContext {
 			contextOffset = 1
 			// Add context as first argument
 			args = append(args, reflect.ValueOf(ctx))
@@ -690,16 +690,16 @@ func (s *McpServer) CallTool(ctx context.Context, name string, params ...any) ([
 		}
 
 		switch o.Type {
-		case McpToolParameterTypeString,
-			McpToolParameterTypeNumber,
-			McpToolParameterTypeBoolean:
+		case McpToolDataTypeString,
+			McpToolDataTypeNumber,
+			McpToolDataTypeBoolean:
 
 			mcpOut := McpToolOutput{
 				Type: McpToolOutputTypeText,
 				Text: fmt.Sprint(out[i]),
 			}
 			output = append(output, mcpOut)
-		case McpToolParameterTypeError:
+		case McpToolDataTypeError:
 			// Check if function return an error
 			if !out[i].IsNil() {
 				err := out[i].Interface()

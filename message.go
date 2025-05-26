@@ -53,7 +53,7 @@ func NewErrUnknownMethod(method string) *McpError {
 	}
 }
 
-func NewErrInvalidArgumentType(name string, expected McpToolParameterType) *McpError {
+func NewErrInvalidArgumentType(name string, expected McpToolDataType) *McpError {
 	return &McpError{
 		Code:    ErrInvalidParametersCode,
 		Message: "invalid argument type",

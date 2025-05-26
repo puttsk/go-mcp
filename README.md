@@ -107,20 +107,35 @@ func init() {
   server.TransportHandler = &awslambda.TransportHandler{}
   server.SessionManager = memory.NewSessionManager()
 
-  server.RegisterTool("simple_func", simpleFunc, mcp.McpToolParameter{Name: "a", Description: "First integer"}, mcp.McpToolParameter{Name: "b", Description: "Second integer"})
-  server.SetToolDescription("simple_func", "A simple function that adds two integers and returns the result.")
+  server.RegisterTool("simple_func", 
+    simpleFunc, 
+    mcp.McpToolParameter{Name: "a", Description: "First integer"}, 
+    mcp.McpToolParameter{Name: "b", Description: "Second integer"},
+  )
+  server.SetToolDescription("simple_func", "Adding two integers and returns the result.")
 
-  server.RegisterTool("scalar_type_func", scalarTypeFunc, mcp.McpToolParameter{Name: "a"}, mcp.McpToolParameter{Name: "b"}, mcp.McpToolParameter{Name: "c"})
-  server.SetToolDescription("scalar_type_func", "A function that takes a string, a float, and a boolean, and returns a formatted string.")
+  server.RegisterTool("scalar_type_func", scalarTypeFunc, 
+    mcp.McpToolParameter{Name: "a"}, 
+    mcp.McpToolParameter{Name: "b"}, 
+    mcp.McpToolParameter{Name: "c"},
+  )
 
-  server.RegisterTool("context_func", contextFunc, mcp.McpToolParameter{Name: "a", Description: "First integer"}, mcp.McpToolParameter{Name: "b", Description: "Second integer"})
-  server.SetToolDescription("context_func", "A function that uses context to return session and request IDs along with the sum of two integers.")
+  server.RegisterTool("context_func", 
+    contextFunc, 
+    mcp.McpToolParameter{Name: "a"}, 
+    mcp.McpToolParameter{Name: "b"},
+  )
 
-  server.RegisterTool("error_func", errorFunc, mcp.McpToolParameter{Name: "a", Description: "First integer"}, mcp.McpToolParameter{Name: "b", Description: "Second integer"})
-  server.SetToolDescription("error_func", "A function that returns an error when called.")
+  server.RegisterTool("error_func", 
+    errorFunc, 
+    mcp.McpToolParameter{Name: "a"}, 
+    mcp.McpToolParameter{Name: "b"},
+  )
 
-  server.RegisterTool("image_func", imageFunc, mcp.McpToolParameter{Name: "img", Description: "Image"})
-  server.SetToolDescription("image_func", "A function that returns the image passed to it without modification.")
+  server.RegisterTool("image_func", 
+    imageFunc, 
+    mcp.McpToolParameter{Name: "img"},
+  )
 }
 
 func main() {

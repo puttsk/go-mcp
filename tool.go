@@ -12,8 +12,9 @@ type McpToolDescriptor struct {
 }
 
 type McpToolInputSchema struct {
-	Type       string                                `json:"type"`       // Always "object"
-	Properties map[string]McpToolInputSchemaProperty `json:"properties"` // Properties of the tool. Key is the property name
+	Type       string                                `json:"type"`               // Always "object"
+	Properties map[string]McpToolInputSchemaProperty `json:"properties"`         // Properties of the tool. Key is the property name
+	Required   []string                              `json:"required,omitempty"` // Required properties of the tool
 }
 
 type McpToolInputSchemaProperty struct {

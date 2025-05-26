@@ -470,6 +470,7 @@ func (s *McpServer) ListTools() ([]McpToolDescriptor, error) {
 			InputSchema: McpToolInputSchema{
 				Type:       "object",
 				Properties: make(map[string]McpToolInputSchemaProperty),
+				Required:   []string{},
 			},
 		}
 		for i, param := range tool.Parameters {
@@ -486,6 +487,9 @@ func (s *McpServer) ListTools() ([]McpToolDescriptor, error) {
 				Type:        string(param.Type),
 				Description: param.Description,
 			}
+
+			// Make all parameters required since Go functions do not support optional parameters
+			t.InputSchema.Required = append(t.InputSchema.Required, param.Name)
 		}
 		tools = append(tools, t)
 	}
